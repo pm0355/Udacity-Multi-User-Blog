@@ -1,0 +1,24 @@
+a {
+  color:#FFFFFF;
+}
+
+a:focus, a:hover {
+  text-decoration: none;
+  color: #F1F1F1;
+}
+
+.navbar {
+  border-radius: 0;
+  margin-bottom: 0;
+  background-color:#2E3D49;
+  color: #FFFFFF;
+  border: none;
+}
+
+.content {
+  color: #4c4c4c;
+  margin: 0;
+  padding: 16px 0;
+  position: relative;
+  transition: background 0.5s ease 0s;
+}
