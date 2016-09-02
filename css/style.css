@@ -1,17 +1,18 @@
 a {
-  color:#FFFFFF;
+  color:#fff;
 }
 
-a:focus, a:hover {
+a:focus, 
+a:hover {
   text-decoration: none;
-  color: #F1F1F1;
+  color: #f1f1f1;
 }
 
 .navbar {
   border-radius: 0;
   margin-bottom: 0;
-  background-color:#2E3D49;
-  color: #FFFFFF;
+  background-color:#2e3d49;
+  color: #fff;
   border: none;
 }
 

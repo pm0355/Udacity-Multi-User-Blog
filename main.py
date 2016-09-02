@@ -29,7 +29,7 @@ def render_str(template, **params):
 
 
 def blog_key(name='default'):
-    return db.Key.from_path('blog', name)
+    return db.Key.from_path('Blog', name)
 
 # create a function to create secure cookie values
 
@@ -57,7 +57,7 @@ def make_salt(length=5):
 def make_pw_hash(name, pw, salt=None):
     if not salt:
         salt = make_salt()
-    h = hashlib.sha256(name + pw + salt).hexdigest()
+    h = hashlib.sha256(''.join([name, pw, salt])).hexdigest()
     return '%s,%s' % (salt, h)
 
 # check if password is valid by hashing and comparing to existing hashed
@@ -171,7 +171,7 @@ class User(db.Model):
 # create a database to store blog posts
 
 
-class blog(db.Model):
+class Blog(db.Model):
     subject = db.StringProperty(required=True)
     content = db.TextProperty(required=True)
     created = db.DateTimeProperty(auto_now_add=True)
@@ -190,20 +190,20 @@ class blog(db.Model):
 # create a database to store all likes
 
 
-class all_likes(db.Model):
-    post = db.ReferenceProperty(blog, required=True)
+class Like(db.Model):
+    post = db.ReferenceProperty(Blog, required=True)
     user = db.ReferenceProperty(User, required=True)
 
     # get number of likes for a blog id
     @classmethod
     def by_blog_id(cls, blog_id):
-        l = all_likes.all().filter('post =', blog_id)
+        l = Like.all().filter('post =', blog_id)
         return l.count()
 
     # get number of likes for a blog and user id
     @classmethod
     def check_like(cls, blog_id, user_id):
-        cl = all_likes.all().filter(
+        cl = Like.all().filter(
             'post =', blog_id).filter(
             'user =', user_id)
         return cl.count()
@@ -212,20 +212,20 @@ class all_likes(db.Model):
 #=UNLIKES====================================================
 
 # create a database to store all unlikes
-class all_unlikes(db.Model):
-    post = db.ReferenceProperty(blog, required=True)
+class Unlike(db.Model):
+    post = db.ReferenceProperty(Blog, required=True)
     user = db.ReferenceProperty(User, required=True)
 
     # get number of unlikes for a blog id
     @classmethod
     def by_blog_id(cls, blog_id):
-        ul = all_unlikes.all().filter('post =', blog_id)
+        ul = Unlike.all().filter('post =', blog_id)
         return ul.count()
 
     # get number of unlikes for a blog and user id
     @classmethod
     def check_unlike(cls, blog_id, user_id):
-        cul = all_unlikes.all().filter(
+        cul = Unlike.all().filter(
             'post =', blog_id).filter(
             'user =', user_id)
         return cul.count()
@@ -235,8 +235,8 @@ class all_unlikes(db.Model):
 # create a database to store all comments
 
 
-class comments(db.Model):
-    post = db.ReferenceProperty(blog, required=True)
+class Comment(db.Model):
+    post = db.ReferenceProperty(Blog, required=True)
     user = db.ReferenceProperty(User, required=True)
     created = db.DateTimeProperty(auto_now_add=True)
     text = db.TextProperty(required=True)
@@ -244,13 +244,13 @@ class comments(db.Model):
     # get number of comments for a blog id
     @classmethod
     def count_by_blog_id(cls, blog_id):
-        c = comments.all().filter('post =', blog_id)
+        c = Comment.all().filter('post =', blog_id)
         return c.count()
 
     # get all comments for a specific blog id
     @classmethod
     def all_by_blog_id(cls, blog_id):
-        c = comments.all().filter('post =', blog_id).order('created')
+        c = Comment.all().filter('post =', blog_id).order('created')
         return c
 
 #=MAIN-PAGE====================================================
@@ -260,7 +260,7 @@ class MainPage(Handler):
 
     def get(self):
         # get all blog posts
-        blogs = db.GqlQuery("SELECT * FROM blog ORDER BY created DESC")
+        blogs = db.GqlQuery("SELECT * FROM Blog ORDER BY created DESC")
         # if there are any existing blog posts render the page with those posts
         if blogs:
             self.render("blogs.html", blogs=blogs)
@@ -287,7 +287,7 @@ class NewPost(Handler):
         # if we have a subject and content of the post add it to the database
         # and redirect us to the post page
         if subject and content:
-            a = blog(
+            a = Blog(
                 parent=blog_key(),
                 subject=subject,
                 content=content,
@@ -311,7 +311,7 @@ class PostPage(Handler):
 
     def get(self, blog_id):
         # get the key for the blog post
-        key = db.Key.from_path("blog", int(blog_id), parent=blog_key())
+        key = db.Key.from_path("Blog", int(blog_id), parent=blog_key())
         post = db.get(key)
 
         # if the post does not exist throw a 404 error
@@ -319,10 +319,10 @@ class PostPage(Handler):
             self.error(404)
             return
         # get likes, unlikes, comments for the blog post
-        likes = all_likes.by_blog_id(post)
-        unlikes = all_unlikes.by_blog_id(post)
-        post_comments = comments.all_by_blog_id(post)
-        comments_count = comments.count_by_blog_id(post)
+        likes = Like.by_blog_id(post)
+        unlikes = Unlike.by_blog_id(post)
+        post_comments = Comment.all_by_blog_id(post)
+        comments_count = Comment.count_by_blog_id(post)
 
         # render the page and show blog content, likes, unlikes, comments, etc.
         self.render(
@@ -335,15 +335,15 @@ class PostPage(Handler):
 
     def post(self, blog_id):
         # get all the necessary parameters
-        key = db.Key.from_path("blog", int(blog_id), parent=blog_key())
+        key = db.Key.from_path("Blog", int(blog_id), parent=blog_key())
         post = db.get(key)
         user_id = User.by_name(self.user.name)
-        comments_count = comments.count_by_blog_id(post)
-        post_comments = comments.all_by_blog_id(post)
-        likes = all_likes.by_blog_id(post)
-        unlikes = all_unlikes.by_blog_id(post)
-        previously_liked = all_likes.check_like(post, user_id)
-        previously_unliked = all_unlikes.check_unlike(post, user_id)
+        comments_count = Comment.count_by_blog_id(post)
+        post_comments = Comment.all_by_blog_id(post)
+        likes = Like.by_blog_id(post)
+        unlikes = Unlike.by_blog_id(post)
+        previously_liked = Like.check_like(post, user_id)
+        previously_unliked = Unlike.check_unlike(post, user_id)
 
         # check if the user is logged in
         if self.user:
@@ -354,7 +354,7 @@ class PostPage(Handler):
                     # then check if the user has liked this post before
                     if previously_liked == 0:
                         # add like to the likes database and refresh the page
-                        l = all_likes(
+                        l = Like(
                             post=post, user=User.by_name(
                                 self.user.name))
                         l.put()
@@ -392,7 +392,7 @@ class PostPage(Handler):
                     if previously_unliked == 0:
                         # add unlike to the unlikes database and refresh the
                         # page
-                        ul = all_unlikes(
+                        ul = Unlike(
                             post=post, user=User.by_name(
                                 self.user.name))
                         ul.put()
@@ -428,7 +428,7 @@ class PostPage(Handler):
                 # check if there is anything entered in the comment text area
                 if comment_text:
                     # add comment to the comments database and refresh page
-                    c = comments(
+                    c = Comment(
                         post=post, user=User.by_name(
                             self.user.name), text=comment_text)
                     c.put()
@@ -495,7 +495,7 @@ class DeleteComment(Handler):
 
     def get(self, post_id, comment_id):
         # get the comment from the comment id
-        comment = comments.get_by_id(int(comment_id))
+        comment = Comment.get_by_id(int(comment_id))
         # check if there is a comment associated with that id
         if comment:
             # check if this user is the author of this comment
@@ -520,8 +520,8 @@ class EditComment(Handler):
 
     def get(self, post_id, comment_id):
         # get the blog and comment from blog id and comment id
-        post = blog.get_by_id(int(post_id), parent=blog_key())
-        comment = comments.get_by_id(int(comment_id))
+        post = Blog.get_by_id(int(post_id), parent=blog_key())
+        comment = Comment.get_by_id(int(comment_id))
         # check if there is a comment associated with that id
         if comment:
             # check if this user is the author of this comment
@@ -544,7 +544,7 @@ class EditComment(Handler):
         # if the user clicks on update comment
         if self.request.get("update_comment"):
             # get the comment for that comment id
-            comment = comments.get_by_id(int(comment_id))
+            comment = Comment.get_by_id(int(comment_id))
             # check if this user is the author of this comment
             if comment.user.name == self.user.name:
                 # update the text of the comment and redirect to the post page
@@ -570,7 +570,7 @@ class EditComment(Handler):
 class EditPost(Handler):
 
     def get(self, blog_id):
-        key = db.Key.from_path("blog", int(blog_id), parent=blog_key())
+        key = db.Key.from_path("Blog", int(blog_id), parent=blog_key())
         post = db.get(key)
 
         # check if the user is logged in
@@ -588,11 +588,12 @@ class EditPost(Handler):
             self.redirect("/login")
 
     def post(self, blog_id):
+        # get the key for this blog post
+        key = db.Key.from_path("Blog", int(blog_id), parent=blog_key())
+        post = db.get(key)
+
         # if the user clicks on update comment
         if self.request.get("update"):
-            # get the key for this blog post
-            key = db.Key.from_path("blog", int(blog_id), parent=blog_key())
-            post = db.get(key)
 
             # get the subject, content and user id when the form is submitted
             subject = self.request.get("subject")
@@ -754,9 +755,14 @@ class Logout(Handler):
 #====================================================
 
 app = webapp2.WSGIApplication([
-    ('/', MainPage), ('/newpost', NewPost),
-    ('/post/([0-9]+)', PostPage), ('/login', Login),
-    ('/logout', Logout), ('/signup', Register), ('/welcome', Welcome),
-    ('/edit/([0-9]+)', EditPost), ('/blog/([0-9]+)/editcomment/([0-9]+)', EditComment),
+    ('/', MainPage), 
+    ('/newpost', NewPost),
+    ('/post/([0-9]+)', PostPage), 
+    ('/login', Login),
+    ('/logout', Logout), 
+    ('/signup', Register), 
+    ('/welcome', Welcome),
+    ('/edit/([0-9]+)', EditPost), 
+    ('/blog/([0-9]+)/editcomment/([0-9]+)', EditComment),
     ('/blog/([0-9]+)/deletecomment/([0-9]+)', DeleteComment),
 ], debug=True)

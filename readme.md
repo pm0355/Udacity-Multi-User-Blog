@@ -3,6 +3,8 @@
 This is a simple blog that enables users to register and add articles. Registered users can like/unlike other users' 
 posts and edit/delete their own posts.
 
+The public url for this blog can be found at: http://my-blog-142203.appspot.com
+
 ==Installation==
 
 1) Ensure you have git installed. 
